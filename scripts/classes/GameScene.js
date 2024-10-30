@@ -7,19 +7,28 @@ export default class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
     this.balls = [];
     this.score = 0;
-    this.acceptedTypes = { left: "apple", right: "raspberry" }; // Types acceptés par chaque panier
-    this.spawnPaused = false; // Contrôle pour interrompre temporairement la génération de balles
+    this.currentRound = 0;
+    this.spawnPaused = false;
+    this.acceptedTypes = { left: "", right: "" }; // Types acceptés par chaque panier
   }
 
   preload() {
     this.load.image("ball", "assets/images/ball.png");
     this.load.image("apple", "assets/images/apple.png");
     this.load.image("raspberry", "assets/images/raspberry.png");
+    this.load.image("banana", "assets/images/banana.png");
+    this.load.image("kiwi", "assets/images/kiwi.png");
     this.load.image("staticPlatform", "assets/images/platformRedLong.png");
     this.load.image("controllablePlatform", "assets/images/platformBlue.png");
+
+    // Charger le fichier JSON avec les paramètres
+    this.load.json("parameters", "assets/parameters.json");
   }
 
   create() {
+    // Charger les données JSON
+    this.parameters = this.cache.json.get("parameters");
+
     // Création de plateformes statiques
     this.staticPlatform1 = new StaticPlatform(
       this,
@@ -45,19 +54,30 @@ export default class GameScene extends Phaser.Scene {
       -20
     );
 
-    // Texte de code PHP au centre
-    this.phpCodeText = this.add
-      .text(
-        400,
-        50,
-        "$fruit = 'apple';\n$$fruit = 'raspberry';\n$$$fruit = 'apple';",
-        {
-          fontSize: "24px",
-          fill: "#FFF",
-          align: "center",
-        }
-      )
-      .setOrigin(0.5);
+    // Création des paniers de détection en bas de l'écran
+    this.createDetectionZones();
+
+    // Minuterie pour gérer le spawn et les changements de round toutes les 10 secondes
+    this.time.addEvent({
+      delay: 10000,
+      callback: this.manageBasketAndSpawn,
+      callbackScope: this,
+      loop: true,
+    });
+
+    // Minuterie pour générer une balle toutes les deux secondes
+    this.time.addEvent({
+      delay: 2000,
+      callback: this.spawnBall,
+      callbackScope: this,
+      loop: true,
+    });
+
+    // Affichage du score
+    this.scoreText = this.add.text(16, 16, "Score: 0", {
+      fontSize: "32px",
+      fill: "#FFF",
+    });
 
     // Texte dynamique pour les paniers
     this.leftBasketText = this.add.text(100, 540, "$fruit", {
@@ -68,31 +88,8 @@ export default class GameScene extends Phaser.Scene {
       fontSize: "24px",
       fill: "#FFF",
     });
-
-    // Création des paniers de détection en bas de l'écran
-    this.createDetectionZones();
-
-    // Minuterie pour alterner les types de fruits acceptés toutes les 10 secondes
-    this.time.addEvent({
-      delay: 10000, // 10 secondes
-      callback: this.manageBasketAndSpawn,
-      callbackScope: this,
-      loop: true,
-    });
-
-    // Minuterie pour générer une balle toutes les deux secondes
-    this.time.addEvent({
-      delay: 2000, // Délai de 2 secondes
-      callback: this.spawnBall,
-      callbackScope: this,
-      loop: true, // Répéter l'événement indéfiniment
-    });
-
-    // Affichage du score
-    this.scoreText = this.add.text(16, 16, "Score: 0", {
-      fontSize: "32px",
-      fill: "#FFF",
-    });
+    // Initialisation du round
+    this.startRound();
 
     // Configuration des touches pour ajuster l'angle de la plateforme contrôlée
     this.input.keyboard.on("keydown-S", () =>
@@ -117,64 +114,106 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  startRound() {
+    console.log("start round");
+    this.currentRound = (this.currentRound + 1) % this.parameters.length;
+    // Récupère les données du round actuel
+    const roundData = this.parameters[this.currentRound];
+
+    // Mettre à jour le code PHP central
+    if (this.phpCodeText) this.phpCodeText.destroy();
+    this.phpCodeText = this.add
+      .text(400, 50, roundData.php, {
+        fontSize: "24px",
+        fill: "#FFF",
+        align: "center",
+      })
+      .setOrigin(0.5);
+
+    // Assigner les types de fruits acceptés par les paniers
+    this.acceptedTypes.left = roundData.types[0];
+    this.acceptedTypes.right = roundData.types[1];
+
+    // Sélectionner un texte aléatoire pour chaque panier
+    this.leftBasketText.setText(
+      Phaser.Utils.Array.GetRandom(roundData[this.acceptedTypes.left])
+    );
+    this.rightBasketText.setText(
+      Phaser.Utils.Array.GetRandom(roundData[this.acceptedTypes.right])
+    );
+
+    // Incrémenter le round pour le suivant
+  }
+
   manageBasketAndSpawn() {
-    console.log(this.balls);
+    console.log("manage basket and spawn");
     // Interrompt le spawn de balles
     this.spawnPaused = true;
+
+    this.startRound();
+
+    this.spawnPaused = false;
 
     // Attendre que toutes les balles soient triées
     this.time.addEvent({
       delay: 100,
       callback: () => {
+        // console.log("this.balls.length : ");
+        // console.log(this.balls.length);
         if (this.balls.length === 0) {
-          // Change le type de fruits acceptés une fois toutes les balles triées
-          this.alternateBasketTypes();
+          // Démarre un nouveau round une fois toutes les balles triées
+          // this.startRound();
 
           // Attendre 2 secondes après le changement pour reprendre le spawn
           this.time.delayedCall(2000, () => {
             this.spawnPaused = false;
           });
-        } else {
-          console.log("manage again");
-          // Si toutes les balles ne sont pas encore triées, vérifier à nouveau dans 100ms
-          this.manageBasketAndSpawn();
         }
       },
       callbackScope: this,
-    });
-  }
-
-  alternateBasketTypes() {
-    // Alterne les types de fruits acceptés
-    if (this.acceptedTypes.left === "apple") {
-      this.acceptedTypes.left = "raspberry";
-      this.acceptedTypes.right = "apple";
-      this.leftBasketText.setText("$$$fruit");
-      this.rightBasketText.setText("$fruit (for 'raspberry')");
-    } else {
-      this.acceptedTypes.left = "apple";
-      this.acceptedTypes.right = "raspberry";
-      this.leftBasketText.setText("$fruit (for 'apple')");
-      this.rightBasketText.setText("$$fruit");
-    }
-
-    // Interrompt temporairement le spawn de balles pendant 1 seconde
-    this.spawnPaused = true;
-    this.time.delayedCall(5000, () => {
-      this.spawnPaused = false;
+      repeat: -1,
     });
   }
 
   spawnBall() {
-    if (this.spawnPaused) return; // Arrête le spawn si la génération est temporairement en pause
+    if (this.spawnPaused) return;
 
-    const isApple = Math.random() < 0.5;
-    const x = isApple ? 50 : 450;
-    const type = isApple ? "apple" : "raspberry";
+    const roundData = this.parameters[this.currentRound];
+
+    console.log("spawn ball");
+    console.log("current round : " + this.currentRound);
+    console.log(roundData);
+    const type = Phaser.Utils.Array.GetRandom(roundData.types);
+    const x = type === this.acceptedTypes.left ? 50 : 450;
     const ball = new Ball(this, x, 50, type);
-    ball.direction = isApple ? -1 : 1;
+    ball.direction = type === this.acceptedTypes.left ? -1 : 1;
     this.balls.push(ball);
   }
+
+  // handleCollision(event) {
+  //   event.pairs.forEach((pair) => {
+  //     this.balls.forEach((ball, index) => {
+  //       if (
+  //         (pair.bodyA === ball.sprite.body && pair.bodyB === this.appleZone) ||
+  //         (pair.bodyB === ball.sprite.body && pair.bodyA === this.appleZone)
+  //       ) {
+  //         this.updateScore(ball.type === this.acceptedTypes.left ? 1 : -1);
+  //         ball.destroy();
+  //         this.balls.splice(index, 1);
+  //       }
+
+  //       if (
+  //         (pair.bodyA === ball.sprite.body &&
+  //           pair.bodyB === this.raspberryZone) ||
+  //         (pair.bodyB === ball.sprite.body && pair.bodyA === this.raspberryZone)
+  //       ) {
+  //         this.updateScore(ball.type === this.acceptedTypes.right ? 1 : -1);
+  //         ball.destroy();
+  //         this.balls.splice(index, 1);
+  //       }
+  //     });
+  //   });
+  // }
 
   handleCollision(event) {
     event.pairs.forEach((pair) => {
@@ -210,8 +249,8 @@ export default class GameScene extends Phaser.Scene {
           (pair.bodyB === ball.sprite.body && pair.bodyA === this.appleZone)
         ) {
           this.updateScore(ball.type === this.acceptedTypes.left ? 1 : -1);
-          ball.destroy(); // Supprime la balle
-          this.balls.splice(index, 1); // Retire la balle de l'array
+          ball.destroy();
+          this.balls.splice(index, 1);
         }
 
         if (
@@ -221,7 +260,7 @@ export default class GameScene extends Phaser.Scene {
         ) {
           this.updateScore(ball.type === this.acceptedTypes.right ? 1 : -1);
           ball.destroy();
-          this.balls.splice(index, 1); // Retire la balle de l'array
+          this.balls.splice(index, 1);
         }
       });
     });

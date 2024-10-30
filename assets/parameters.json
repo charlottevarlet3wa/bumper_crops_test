@@ -6,10 +6,10 @@
       "raspberry": ["$$fruit", "$apple"]
     },
     {
-      "types": ["banana", "grape"],
-      "php": "$fruit = 'banana';\n$$fruit = 'grape';\n$$$fruit = 'banana';",
-      "banana": ["$fruit", "$grape", "$$$fruit"],
-      "grape": ["$$fruit", "$banana"]
+      "types": ["banana", "kiwi"],
+      "php": "$fruit = 'banana';\n$$fruit = 'kiwi';\n$$$fruit = 'banana';",
+      "banana": ["$fruit", "$kiwi", "$$$fruit"],
+      "kiwi": ["$$fruit", "$banana"]
     }
   ]
   
