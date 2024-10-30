@@ -1,0 +1,15 @@
+[
+    {
+      "types": ["apple", "raspberry"],
+      "php": "$fruit = 'apple';\n$$fruit = 'raspberry';\n$$$fruit = 'apple';",
+      "apple": ["$fruit", "$raspberry", "$$$fruit"],
+      "raspberry": ["$$fruit", "$apple"]
+    },
+    {
+      "types": ["banana", "grape"],
+      "php": "$fruit = 'banana';\n$$fruit = 'grape';\n$$$fruit = 'banana';",
+      "banana": ["$fruit", "$grape", "$$$fruit"],
+      "grape": ["$$fruit", "$banana"]
+    }
+  ]
+  
