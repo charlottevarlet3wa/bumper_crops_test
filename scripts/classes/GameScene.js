@@ -115,7 +115,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   startRound() {
-    console.log("start round");
     this.currentRound = (this.currentRound + 1) % this.parameters.length;
     // Récupère les données du round actuel
     const roundData = this.parameters[this.currentRound];
@@ -146,7 +145,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   manageBasketAndSpawn() {
-    console.log("manage basket and spawn");
     // Interrompt le spawn de balles
     this.spawnPaused = true;
 
@@ -158,8 +156,6 @@ export default class GameScene extends Phaser.Scene {
     this.time.addEvent({
       delay: 100,
       callback: () => {
-        // console.log("this.balls.length : ");
-        // console.log(this.balls.length);
         if (this.balls.length === 0) {
           // Démarre un nouveau round une fois toutes les balles triées
           // this.startRound();
@@ -180,40 +176,12 @@ export default class GameScene extends Phaser.Scene {
 
     const roundData = this.parameters[this.currentRound];
 
-    console.log("spawn ball");
-    console.log("current round : " + this.currentRound);
-    console.log(roundData);
     const type = Phaser.Utils.Array.GetRandom(roundData.types);
     const x = type === this.acceptedTypes.left ? 50 : 450;
     const ball = new Ball(this, x, 50, type);
     ball.direction = type === this.acceptedTypes.left ? -1 : 1;
     this.balls.push(ball);
   }
-
-  // handleCollision(event) {
-  //   event.pairs.forEach((pair) => {
-  //     this.balls.forEach((ball, index) => {
-  //       if (
-  //         (pair.bodyA === ball.sprite.body && pair.bodyB === this.appleZone) ||
-  //         (pair.bodyB === ball.sprite.body && pair.bodyA === this.appleZone)
-  //       ) {
-  //         this.updateScore(ball.type === this.acceptedTypes.left ? 1 : -1);
-  //         ball.destroy();
-  //         this.balls.splice(index, 1);
-  //       }
-
-  //       if (
-  //         (pair.bodyA === ball.sprite.body &&
-  //           pair.bodyB === this.raspberryZone) ||
-  //         (pair.bodyB === ball.sprite.body && pair.bodyA === this.raspberryZone)
-  //       ) {
-  //         this.updateScore(ball.type === this.acceptedTypes.right ? 1 : -1);
-  //         ball.destroy();
-  //         this.balls.splice(index, 1);
-  //       }
-  //     });
-  //   });
-  // }
 
   handleCollision(event) {
     event.pairs.forEach((pair) => {
